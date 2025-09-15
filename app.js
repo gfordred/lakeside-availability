@@ -372,6 +372,30 @@ function showDetails(standId, rec, locked = false) {
   const statusKeyed = rec?.status || "unknown";
   const statusTxt = rec?.rawStatus || statusKeyed;
 
+  // Build the extra rows, excluding LastUpdated and blanks
+  const extraRows = rec
+    ? Object.entries(rec.row)
+        .filter(([h, v]) => {
+          const H = norm(h);
+          if (!H) return false; // skip empty header (prevents stray ":")
+          if (H === norm(ID_COLUMN)) return false;
+          if (H === norm(STATUS_COLUMN)) return false;
+          if (typeof UPDATED_COLUMN !== "undefined" && H === norm(UPDATED_COLUMN)) return false; // hide LastUpdated
+          // optionally hide empty values:
+          return String(v ?? "").trim().length > 0;
+        })
+        .map(([h, v]) => {
+          let val = v || "";
+          if (norm(h) === norm(SIZE_COLUMN) && val) val = `${val} m²`;
+          return `
+            <div class="detail-row">
+              <div class="detail-label">${h}:</div>
+              <div>${val}</div>
+            </div>`;
+        })
+        .join("")
+    : `<div class="muted">No extra data in sheet for this stand.</div>`;
+
   details.classList.remove("muted");
   details.innerHTML = `
     <div class="detail-row"><div class="detail-label">Stand:</div><div><b>${label}</b></div></div>
@@ -380,20 +404,12 @@ function showDetails(standId, rec, locked = false) {
         ${statusTxt}
       </span></div>
     </div>
-    ${
-      rec
-        ? Object.entries(rec.row)
-            .filter(([h]) => norm(h)!==norm(ID_COLUMN) && norm(h)!==norm(STATUS_COLUMN))
-            .map(([h,v]) => {
-              let val = v || "";
-              if (norm(h) === norm(SIZE_COLUMN) && val) val = `${val} m²`;
-              return `<div class="detail-row"><div class="detail-label">${h}:</div><div>${val}</div></div>`;
-            }).join("")
-        : `<div class="muted">No extra data in sheet for this stand.</div>`
-    }
-    ${locked ? `<div class="muted" style="margin-top:8px">Locked. Click the stand again to unlock or press esc.</div>` : "" }
-  `;
+    ${extraRows}
+    ${locked ? `<div class="muted" style="margin-top:8px">Locked. Click the stand again to unlock.</div>` : ""}`; 
+
+  openSideOnMobile();
 }
+
 
 function clearDetails() {
   if (lockedId) return;
@@ -523,3 +539,4 @@ document.addEventListener('DOMContentLoaded', () => {
   init();
   setupPanZoom();
 });
+
