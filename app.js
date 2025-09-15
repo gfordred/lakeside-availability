@@ -7,6 +7,7 @@ const ID_COLUMN     = "StandID";
 const STATUS_COLUMN = "Status";
 const SIZE_COLUMN   = "Size";
 const PRICE_COLUMN  = "Price";
+const UPDATED_COLUMN = "LastUpdated";
 
 const POLYGONS_JSON_URL = "polygons.json"; 
 
@@ -76,23 +77,36 @@ async function hashTextSHA256(text) {
 /* ===========================
    LAST UPDATED LINE
    =========================== */
-function updateLastUpdatedLine(lastModifiedHeader) {
+function updateLastUpdatedFromSheet(sheetVal) {
   const el = document.getElementById("lastUpdated");
   if (!el) return;
 
-  const dt = lastModifiedHeader ? new Date(lastModifiedHeader) : new Date();
+  // Try to parse the value from the sheet. We prefer ISO like "2025-01-31T13:32:00"
+  const toDate = (v) => {
+    if (!v) return null;
+    const iso = String(v).trim().replace(" ", "T"); // normalize if needed
+    const d = new Date(iso);
+    return isNaN(+d) ? null : d;
+  };
+
+  const dt = toDate(sheetVal) || new Date(); // last resort: now
   const formatted = new Intl.DateTimeFormat("en-ZA", {
     timeZone: "Africa/Johannesburg",
-    year: "numeric", month: "long", day: "2-digit",
-    hour: "2-digit", minute: "2-digit"
+    year: "numeric",
+    month: "long",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
   }).format(dt);
 
   const text = `Last updated ${formatted} SAST`;
   el.textContent = text;
+
+  // Persist so reloads show the same value until data actually changes
   try { localStorage.setItem("sheetLastUpdatedDisplay", text); } catch {}
 }
 
-// On first paint, restore the previously shown “Last updated …” if we have it
+// On first paint, restore the previously shown "Last updated …" if we have it
 (function primeLastUpdatedFromStorage(){
   const saved = localStorage.getItem("sheetLastUpdatedDisplay");
   if (saved) {
@@ -214,27 +228,43 @@ async function loadSheet() {
   const res  = await fetch(SHEET_CSV_URL, { cache: "no-store" });
   const text = await res.text();
 
-  // Signature that only changes when the published sheet changes
+  // Signature: only update "Last updated" when the published CSV actually changes
   const lastMod = res.headers.get("Last-Modified") || "";
   const etag    = res.headers.get("ETag") || "";
   let signature = (lastMod || etag) ? `hdr:${lastMod}|${etag}` : `sha256:${await hashTextSHA256(text)}`;
 
-  const prevSig = localStorage.getItem("sheetSignature");
-  if (signature !== prevSig) {
-    updateLastUpdatedLine(lastMod || null);
-    try { localStorage.setItem("sheetSignature", signature); } catch {}
-  }
-
+  // Parse CSV
   const rows = parseCSV(text);
   if (!rows.length) return {};
   const headers = rows[0].map(h => h.trim());
+
   const idx = {
-    id: headers.findIndex(h => norm(h) === norm(ID_COLUMN)),
-    status: headers.findIndex(h => norm(h) === norm(STATUS_COLUMN))
+    id:     headers.findIndex(h => norm(h) === norm(ID_COLUMN)),
+    status: headers.findIndex(h => norm(h) === norm(STATUS_COLUMN)),
+    updated:headers.findIndex(h => norm(h) === norm(UPDATED_COLUMN))
   };
+
+  // Grab the sheet-provided timestamp (first non-empty cell in LastUpdated column)
+  let sheetUpdatedValue = null;
+  if (idx.updated >= 0) {
+    for (let r = 1; r < rows.length; r++) {
+      const v = rows[r][idx.updated];
+      if (v && String(v).trim()) { sheetUpdatedValue = v; break; }
+    }
+  }
+
+  const prevSig = localStorage.getItem("sheetSignature");
+  if (signature !== prevSig) {
+    // CSV changed → show the sheet's timestamp (preferred), otherwise fall back gracefully
+    updateLastUpdatedFromSheet(sheetUpdatedValue || lastMod || "");
+    try { localStorage.setItem("sheetSignature", signature); } catch {}
+  }
+  // else: CSV didn't change → keep whatever was previously shown
+
+  // Build the status map (unchanged)
   const map = {};
   for (let r=1; r<rows.length; r++) {
-    const row = rows[r];
+    const row   = rows[r];
     const idVal = row[idx.id] ?? "";
     const sVal  = row[idx.status] ?? "";
     if (!idVal) continue;
@@ -247,6 +277,7 @@ async function loadSheet() {
   }
   return map;
 }
+
 
 async function loadPolygons(){
   if (POLYGONS_JSON_URL){
