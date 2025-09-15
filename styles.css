@@ -91,11 +91,7 @@ h2 { margin:0 0 6px; font-size:18px; }
   gap: .4rem .6rem;
   align-items: center;
 }
-#legendBlock .legend > span:last-of-type{
-  grid-column: 1 / -1;
-  display: block;
-  margin-top: .5rem;
-}
+
 
 /* Hide old drawer header rows on desktop */
 @media (min-width: 769px) {
