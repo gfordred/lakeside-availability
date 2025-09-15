@@ -1,0 +1,151 @@
+:root { color-scheme: light; }
+
+/* Layout */
+html, body { height:100%; margin:0; overflow: hidden; font-family: Arial, Helvetica, sans-serif; }
+#layout { height: 100vh; overflow: hidden; display:flex; gap: 12px; padding: 12px; box-sizing: border-box; }
+
+/* Left map column */
+#mapCard { flex:1; overflow:hidden; min-height: 0; background:#fff; border-radius: 8px; }
+#mapWrap { width:100%; height:100%; position:relative; }
+svg#mapSvg { display:block; width:100%; height:100%; cursor:default; }
+
+/* Polygons */
+#polys-layer polygon {
+  fill:#9ea3a8; fill-opacity:.35;
+  stroke:#000; stroke-opacity:.35; stroke-width:1;
+  cursor:pointer;
+  transition:fill-opacity .15s, stroke-opacity .15s;
+  touch-action: manipulation;
+}
+#polys-layer polygon:hover { fill-opacity:.55; stroke-opacity:.55; }
+#polys-layer polygon.active {
+  stroke: #ffcc00;
+  stroke-width: 5;
+  stroke-opacity: 1;
+  fill-opacity: 0.65;
+  filter: drop-shadow(0 0 8px rgba(255, 204, 0, 0.9));
+}
+
+/* Pan/zoom affordances */
+#mapSvg { touch-action: none; } /* allow pinch/drag */
+#mapSvg.grabbing { cursor: grabbing; }
+#mapSvg.can-pan { cursor: grab; }
+
+/* Overlay zoom buttons */
+.zoom-controls {
+  position: absolute;
+  top: 12px; left: 12px;
+  display: flex; gap: 6px;
+  z-index: 5;
+}
+.zoom-controls button {
+  border: 1px solid rgba(0,0,0,.2);
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font: 600 14px/1 Arial, Helvetica, sans-serif;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+.zoom-controls button:active { transform: translateY(1px); }
+
+/* Right column (sidebar) = only scroller */
+#side {
+  width: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overscroll-behavior: contain;
+  background:#fff;
+  border-radius: 8px;
+  padding: 16px;
+}
+#logo { width:100%; height:auto; display:block; margin:0 0 14px 0; }
+h2 { margin:0 0 6px; font-size:18px; }
+.muted { color:#6b7280; }
+#details { min-height:140px; border-top:1px solid #eee; border-bottom:1px solid #eee; padding:14px 0; }
+.detail-row { display:flex; gap:10px; margin:6px 0; }
+.detail-label { width:92px; color:#6b7280; }
+.legend { margin-top:8px; display:grid; grid-template-columns: 18px auto; align-items:center; gap:8px 10px; }
+.swatch { width:18px; height:18px; border-radius:4px; border:1px solid rgba(0,0,0,.15); }
+.swatch.green { background:#2ecc71; }
+.swatch.yellow { background:#f4b400; }
+.swatch.red { background:#d93025; }
+.swatch.gray { background:#9ea3a8; }
+.pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid #e5e7eb; }
+
+/* Legend pinned at bottom (desktop) */
+#legendBlock {
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  border-top: 1px solid #eee;
+  padding: 12px 0 10px;
+}
+#legendBlock .legend{
+  display: grid;
+  grid-template-columns: 1.1rem 1fr;
+  gap: .4rem .6rem;
+  align-items: center;
+}
+#legendBlock .legend > span:last-of-type{
+  grid-column: 1 / -1;
+  display: block;
+  margin-top: .5rem;
+}
+
+/* Hide old drawer header rows on desktop */
+@media (min-width: 769px) {
+  .drawer-header { display:none; }
+}
+
+/* —— Mobile —— */
+@media (max-width: 768px) {
+  #layout { flex-direction: column; height: 100vh; padding: 8px; gap: 8px; }
+
+  /* Map on top, fixed height */
+  #mapCard {
+    height: 38vh;
+    min-height: 240px;
+    order: 1;
+  }
+  #mapWrap, svg#mapSvg { height: 100%; }
+
+  /* Sidebar always visible, below map */
+  #side {
+    position: static;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: none;
+    order: 2;
+    display: block;
+    padding: 12px 14px 18px;
+  }
+
+  .drawer-header { display: none !important; }
+
+  #side, #side * { font-size: 15px; }
+  .detail-label { width: 110px; }
+  .pill { padding: 4px 10px; font-size: 13px; }
+
+  #logo { max-width: 220px; height: auto; margin: 8px auto 6px; display:block; }
+
+  #legendBlock {
+    position: static;
+    padding: 10px 0 8px;
+    background: #fff;
+    border-top: 1px solid #eee;
+    margin-top: 12px;
+    padding-left: 2px; padding-right: 2px;
+  }
+  #legendBlock .legend {
+    grid-template-columns: 1.1rem 1fr;
+    gap: .45rem .6rem;
+  }
+}
